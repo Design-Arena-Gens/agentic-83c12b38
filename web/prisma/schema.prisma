@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Hotel {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  logoUrl         String?
+  googleReviewUrl String?
+  adminPin        String
+  description     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  menuCategories  MenuCategory[]
+  menuItems       MenuItem[]
+  tables          Table[]
+  orders          Order[]
+  ratings         Rating[]
+  analytics       HotelAnalytics?
+}
+
+model HotelAnalytics {
+  id            String   @id @default(cuid())
+  hotel         Hotel    @relation(fields: [hotelId], references: [id])
+  hotelId       String   @unique
+  totalOrders   Int      @default(0)
+  totalRevenue  Float    @default(0)
+  avgRating     Float    @default(0)
+  reviewCount   Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+model MenuCategory {
+  id      String     @id @default(cuid())
+  name    String
+  hotel   Hotel      @relation(fields: [hotelId], references: [id])
+  hotelId String
+  items   MenuItem[]
+
+  @@unique([hotelId, name], name: "hotelId_name")
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  isAvailable Boolean      @default(true)
+  imageUrl    String?
+  hotel       Hotel        @relation(fields: [hotelId], references: [id])
+  hotelId     String
+  category    MenuCategory @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  orderItems  OrderItem[]
+
+  @@unique([hotelId, name], name: "hotelId_name")
+}
+
+model Table {
+  id       String  @id @default(cuid())
+  name     String
+  qrSlug   String  @unique
+  hotel    Hotel   @relation(fields: [hotelId], references: [id])
+  hotelId  String
+  orders   Order[]
+
+  @@unique([hotelId, name], name: "hotelId_name")
+}
+
+model Order {
+  id             String         @id @default(cuid())
+  status         String         @default("PENDING")
+  hotel          Hotel          @relation(fields: [hotelId], references: [id])
+  hotelId        String
+  table          Table          @relation(fields: [tableId], references: [id])
+  tableId        String
+  subtotal       Float
+  tax            Float
+  total          Float
+  specialNotes   String?
+  items          OrderItem[]
+  rating         Rating?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model OrderItem {
+  id           String    @id @default(cuid())
+  order        Order     @relation(fields: [orderId], references: [id])
+  orderId      String
+  menuItem     MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItemId   String
+  quantity     Int       @default(1)
+  instructions String?
+  lineTotal    Float
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String   @unique
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  hotelId   String
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+}
